@@ -145,20 +145,23 @@ def scanPortfolio():
                 
             lenDiff = len(ema12) - len(ema26)
             macds = []
-            for i in range(len(ema26)):
-                macds.append(ema12[i + lenDiff] - ema26[i])
+            for j in range(len(ema26)):
+                macds.append(ema12[j + lenDiff] - ema26[j])
             
             signalLine = ema(macds, 9)
 
             # Sell if macd crosses below signal line
             if (macds[-1] < signalLine[-1]):
-                # alpacaApi.submit_order(
-                #     symbol=symbol,
-                #     qty=
-                # )
+                alpacaApi.submit_order(
+                    symbol=symbol,
+                    qty=int(portfolioDF.iloc[i]['qty']),
+                    side='sell',
+                    type='market',
+                    time_in_force='gtc'
+                )
                 print("SOLD: " + symbol)
             else:
-                print("NOT SOLD: " + symbol)
+                print("KEPT: " + symbol)
 
         except TypeError: # Too few values in the stock history for the window in EMA
             pass
