@@ -112,10 +112,12 @@ def rsi(closingPrices, currPrice, window):
     return rsi
 
 def scanPortfolio():
+    # CURRENTLY USES MACD 26/12 TRADING STRATEGY
+    
     # Get all current stocks in the portfolio
     # Get history for each stock
-    # Decide whether to sell, keep or buy more
-    # Execute any sell/buy orders
+    # Decide whether to sell or keep
+    # Execute any sell orders
 
     positions = alpacaApi.list_positions()
     symbol, qty, marketValue = [], [], []
@@ -133,8 +135,9 @@ def scanPortfolio():
         }
     )
 
-    for symbol in portfolioDF['symbol']:
-        history = (yfinance.download(symbol, start="2019-11-01", end="2020-01-07"))
+    for i in range(len(portfolioDF['symbol'])):
+        symbol = portfolioDF.iloc[i]['symbol']
+        history = (yfinance.download(symbol, period="3mo")) # 3 month period of data
 
         try:
             ema26 = ema(history['Close'], 26)
@@ -142,50 +145,26 @@ def scanPortfolio():
                 
             lenDiff = len(ema12) - len(ema26)
             macds = []
-            for i in range(len(ema26)):
-                macds.append(ema12[i + lenDiff] - ema26[i])
+            for j in range(len(ema26)):
+                macds.append(ema12[j + lenDiff] - ema26[j])
             
             signalLine = ema(macds, 9)
 
             # Sell if macd crosses below signal line
             if (macds[-1] < signalLine[-1]):
-                # Sell this stock
+                alpacaApi.submit_order(
+                    symbol=symbol,
+                    qty=int(portfolioDF.iloc[i]['qty']),
+                    side='sell',
+                    type='market',
+                    time_in_force='gtc'
+                )
                 print("SOLD: " + symbol)
             else:
-                print("NOT SOLD: " + symbol)
+                print("KEPT: " + symbol)
 
-            print("MACDS")
-            print(macds[-1])
-            print("Signal")
-            print(signalLine[-1])
         except TypeError: # Too few values in the stock history for the window in EMA
             pass
-    
-
-
-    # try:
-    #     for df in history:
-    #         ema26 = ema(df['Close'], 26)
-    #         ema12 = ema(df['Close'], 12)
-            
-    #         lenDiff = len(ema12) - len(ema26)
-    #         macds = []
-    #         for i in range(len(ema26)):
-    #             macds.append(ema12[i + lenDiff] - ema26[i])
-            
-    #         signalLine = ema(macds, 9)
-
-    #         # Sell if macd crosses below signal line
-    #         if (macds[-1] < signalLine[-1]):
-    #             # Sell this stock
-    #             print("SOLD " + )
-
-    #         print("MACDS")
-    #         print(macds)
-    #         print("Signal")
-    #         print(signalLine)
-    # except TypeError: # Too few values for the window in EMA
-    #     return
 
     return
 
