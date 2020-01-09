@@ -2,10 +2,11 @@ import alpaca_trade_api as alpaca
 import yfinance as yfinance
 import pandas as pandas
 import numpy as numpy
+from alpacaKeys import alpaca_key_id, alpaca_secret_key
 
 # Alpaca creds and api
-key_id = "YOUR KEY HERE"
-secret_key = "YOUR SECRET KEY HERE"
+key_id = alpaca_key_id
+secret_key = alpaca_secret_key
 
 # Initialize the alpaca api
 base_url = "https://paper-api.alpaca.markets"
