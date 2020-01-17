@@ -49,6 +49,7 @@ def scanPortfolio():
     for i in range(len(portfolioDF['symbol'])):
         symbol = portfolioDF.iloc[i]['symbol']
         history = yfinance.download(symbol, period="3mo") # 3 month period of data
+        history = history.loc[~history.index.duplicated(keep='first')]
 
         try:
             action = tradingLogic(history, symbol)
@@ -70,13 +71,13 @@ def scanPortfolio():
 
     return
 
-def findStocks(numDesiredStocks):
+def findStocks(numDesiredStocks, market):
     # Scrape eoddata.com for all stock symbols in NYSE
     # Retrieve data for all stocks through yfinance
     # Analyze the stock data to decide which stocks to buy
     # Execute any buy orders
 
-    #Args: Desired number of different stocks to own
+    #Args: Desired number of different stocks to own, stock market
 
     alphabet = list(string.ascii_uppercase)
 
@@ -85,7 +86,7 @@ def findStocks(numDesiredStocks):
     # Loop through the letters in the alphabet to get the stocks on each page
     # from the table and store them in a list
     for each in alphabet:
-        url = 'http://eoddata.com/stocklist/NYSE/{}.htm'.format(each)
+        url = 'http://eoddata.com/stocklist/' + market + '/{}.htm'.format(each)
         response = requests.get(url)
         site = response.content
         soup = BeautifulSoup(site, 'html.parser')
@@ -115,7 +116,7 @@ def findStocks(numDesiredStocks):
     # Find potential stocks to buy
     potentialBuys = []
     for i in range(len(symbols)):
-        # yfinance API sometimes return duplicate dates, this keeps one copy
+        # yfinance API sometimes return duplicate dates when querying multiple stocks, this keeps one copy
         history = data[symbols[i]].loc[~data[symbols[i]].index.duplicated(keep='first')]
         # ... and sometimes the first row is NaN, so we delete it
         history = history.drop(history.index[0])
@@ -134,6 +135,9 @@ def findStocks(numDesiredStocks):
         symbol = stock[0]
         history = stock[1]
 
+        if (numStocksToBuy <= 0):
+            break
+
         qty = int((buyingPower / numStocksToBuy) / history['Close'][-1])
 
         if (qty > 0):
@@ -150,15 +154,24 @@ def findStocks(numDesiredStocks):
                 buyingPower -= qty * history['Close'][-1]
             except alpaca.rest.APIError:
                 pass
-
-        if (numStocksToBuy <= 0):
-            break
     
     return
 
-#test1 = [44.34, 44.09, 44.15, 43.61, 44.33, 44.83, 45.10, 45.42, 45.84, 46.08, 45.89, 46.03, 45.61, 46.28, 46.28, 46.00, 46.03,
-    #46.41, 46.22, 45.64, 46.21, 46.25, 45.71, 46.45, 45.78, 45.35, 44.03, 44.18, 44.22, 44.57, 43.42, 42.66]
-#test3 = [10, 10.15, 10.17, 10.13, 10.11, 10.15, 10.20, 10.20, 10.22, 10.21]
-#test4 = [25200, 30000, 25600, 32000, 23000, 40000, 36000, 20500, 23000, 27500]
-#test.append(("GOOGL", yfinance.download("GOOGL", start="2020-01-01", end="2020-01-07")))
-findStocks(8)
+def main():
+    # The main function to run the bot
+
+    # Settings
+    numDesiredStocks = 8
+    market = "NYSE"
+
+    orders = alpacaApi.list_orders()
+
+    if (len(orders) == 0):
+        scanPortfolio()
+        findStocks(numDesiredStocks, market)
+    else:
+        print("Waiting for previous orders to complete")
+
+    return
+
+main()
